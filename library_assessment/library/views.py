@@ -2,119 +2,158 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from rest_framework_simplejwt.authentication import JWTAuthentication
+# from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from django.http import JsonResponse
+
+import json
+
+from library.models import Author, Book, Shelf
 
 # @api_view(['GET'])
 # @authentication_classes(JWTAuthentication)
 # @permission_classes((IsAuthenticated,))
-def get_all_books(request):
-    if request.method == 'GET':
-        try:
+def get_and_create_books(request):
+    try:
+        if request.method == 'GET':
+            all_books = Book.objects.all().values()
             return JsonResponse({
                 "success" : True,
-                "message" : "get all books"
+                "data" : list(all_books)
             })
-        except Exception as error:
-            return JsonResponse({
-                "success" : False,
-                "error" : str(error)
-            })
-    if request.method == 'POST':
-        try:
+       
+        if request.method == 'POST':
+            request_body = json.loads(request.body.decode('utf-8'))
+            new_book = Book()
+            for field, value in request_body.items():
+                if hasattr(new_book, field):  # Check if the field exists in the model
+                    setattr(new_book, field, value)
+            new_book.save()
             return JsonResponse({
                 "success" : True,
-                "message" : "Created new book"
+                "message" : "New Book created",
             })
-        except Exception as error:
-            return JsonResponse({
-                "success" : False,
-                "error" : str(error)
-            })
+            
+    except Exception as error:
+        return JsonResponse({
+            "success" : False,
+            "error" : str(error)
+        })
     
 def book_operations(request, id):
-    if request.method == 'GET':
-        try:
-            return JsonResponse({"message": "Get one book"})
-
-        except Exception as error:
-            return JsonResponse({
-                "success" : False,
-                "error" : str(error)
-            })
-
-    if request.method == 'PUT':
-        try:
+    #Get Book with sepcific id:
+    try:            
+        if request.method == 'GET':
+            book = Book.objects.filter(id=str(id)).first()
             return JsonResponse({
                 "success" : True,
-                "message" : "Editing book"
+                "data": book
             })
-        except Exception as error:
-            return JsonResponse({
-                "success" : False,
-                "error" : str(error)
-            })
+
+        if request.method == 'PUT':
+            request_body = json.loads(request.body.decode('utf-8'))
+            book = Book.objects.filter(id=str(id)).first()
+            for field, value in request_body.items():
+                if hasattr(book, field):  
+                    setattr(book, field, value)
+            book.save()
             
-    if request.method == 'DELETE':
-        try:
             return JsonResponse({
                 "success" : True,
-                "message" : "Deleting book"
-            })
-        except Exception as error:
-            return JsonResponse({
-                "success" : False,
-                "error" : str(error)
+                "message" : "Book updated."
             })
             
-def get_authors(request):
-    if request.method == 'GET':
-        try:
+        if request.method == 'DELETE':
+            request_body = json.loads(request.body.decode('utf-8'))
+            book = Book.objects.filter(id=str(id)).first()
+            book.delete()
+            
             return JsonResponse({
-                "message" : "All Authors"
+                "success" : True,
+                "message" : "Book Deleted"
             })
-        except Exception as error:
-            return JsonResponse({
-                "error" : str(error)
-            })
+            
+    except Book.DoesNotExist:
+        return JsonResponse({
+            "success" : False,
+            "error" : f"Book with id {str(id)} does not exist."
+    })
     
-    if request.method == 'POST':
-        try:
+    except Exception as error:
+        return JsonResponse({
+            "success" : False,
+            "error" : str(error)
+    })
+            
+def get_and_create_authors(request):
+    try:
+        if request.method == 'GET':
+            all_authors = Author.objects.all().values()
             return JsonResponse({
-                "message" : "Creating a new author"
+                "success" : True,
+                "data" : list(all_authors)
             })
-        except Exception as error:
+        
+        if request.method == 'POST':
+            request_body = json.loads(request.body.decode('utf-8'))
+            new_author = Author()
+            for field, value in request_body.items():
+                if hasattr(new_author, field):  # Check if the field exists in the model
+                    setattr(new_author, field, value)
+            new_author.save()
             return JsonResponse({
-                "error" : str(error)
-            })
+                "success" : True,
+                "message" : "New author created."
+            }) 
+            
+    except Exception as error:
+        return JsonResponse({
+            "success" : False,
+            "error" : str(error)
+        })
+
             
 def author_operations(request, id):
-    if request.method == 'GET':
-        try:
+    try:
+        if request.method == 'GET':
+            author_id = str(id)
+            author = Author.objects.filter(id=author_id).first().values()
             return JsonResponse({
-                "message" : "Get author by id"
-            })
-        except Exception as error:
-            return JsonResponse({
-                "error" : str(error)
-            })
-    if request.method == 'PUT':
-        try:
-            return JsonResponse({
-                "message" : "Updating Author"
-            })
-        except Exception as error:
-            return JsonResponse({
-                "error" : str(error)
+                "success" : True,
+                "message" : str(author)
             })
             
-    if request.method == 'DELETE':
-        try:
+        if request.method == 'PUT':
+            request_body = json.loads(request.body.decode('utf-8'))
+            author = Author.objects.filter(id=str(id)).first()
+            for field, value in request_body.items():
+                if hasattr(author, field):  
+                    setattr(author, field, value)
+            author.save()
             return JsonResponse({
-                "message" : "Deleting Author"
+                "success" : True,
+                "message" : "Author updated."
             })
-        except Exception as error:
+            
+        if request.method == 'DELETE':
+            request_body = json.loads(request.body.decode('utf-8'))
+            author = Author.objects.filter(id=str(id)).first()
+            author.delete()
             return JsonResponse({
-                "error" : str(error)
+                "success" : True,
+                "message" : "Author deleted."
             })
+            
+    except Author.DoesNotExist:
+        return JsonResponse({
+            "success" : False,
+            "error" : f"Author with id {id} does not exist."
+        })
+    except Exception as error:
+        return JsonResponse({
+            "success" : False,
+            "error" : str(error)
+        })
+
+            
+
