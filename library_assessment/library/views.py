@@ -1,13 +1,16 @@
-from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.authentication import  BasicAuthentication
+from rest_framework.permissions import IsAuthenticated, AllowAny
 # from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from django.http import JsonResponse
-
+from rest_framework.authtoken.models import Token
+from rest_framework_simplejwt.tokens import RefreshToken
 import json
 
 from library.models import Author, Book, Shelf
@@ -18,6 +21,23 @@ from library.models import Author, Book, Shelf
 def get_and_create_books(request):
     try:
         if request.method == 'GET':
+            request_body = json.loads(request.body.decode('utf-8'))
+            search = request.GET.get('search')
+            if 'author' in search:
+                query = search.split("=")
+                books = Book.objects.filter(author=query[1])
+                return JsonResponse({
+                    "success" : True,
+                    "data" : list(books.values())
+                })
+            elif 'title' in search:
+                query = search.split("=")
+                books = Book.objects.filter(title=query[1])
+                return JsonResponse({
+                    "success" : True,
+                    "data" : list(books.values())
+                })
+                
             all_books = Book.objects.all().values()
             return JsonResponse({
                 "success" : True,
@@ -157,5 +177,96 @@ def author_operations(request, id):
             "error" : str(error)
         })
 
-            
+@authentication_classes([BasicAuthentication])
+@permission_classes([IsAuthenticated])
+@api_view(['POST'])            
+def register(request):
+    try:
+        """
+        API endpoint for user registration
+        """
+        username = request.data.get("username")
+        email = request.data.get("email")
+        password = request.data.get("password")
 
+        if not username or not email or not password:
+            return JsonResponse({
+                "success" : False,
+                "error": "All fields are required"
+            })
+
+        if User.objects.filter(username=username).exists():
+            return JsonResponse({
+                "success" : False,
+                "error": "Username already exists"
+            })
+
+        user = User.objects.create_user(username=username, email=email, password=password)
+        tokens = get_tokens_for_user(user)
+        return Response({
+            "success": True,
+            "access": tokens['access'],
+            "refresh": tokens['refresh']
+        })
+
+    except Exception as error:
+        return JsonResponse({
+            "success" : False,
+            "error" : str(error)
+        })
+@csrf_exempt
+@api_view(['POST']) 
+def login(request):
+    try:
+        """
+        API endpoint for user login
+        """
+        username = request.data.get("username")
+        password = request.data.get("password")
+
+        if not username or not password:
+            return Response({
+                "success" : False,
+                "error": "Both username and password are required"
+            })
+        user = authenticate(username=username, password=password)
+        if user is None:
+            return Response({
+                "success" : False,
+                "error": "Invalid credentials"
+            })
+
+        tokens = get_tokens_for_user(user)
+
+        return Response({
+            "success": "True",
+            "message": "Login successful",
+            "tokens": tokens
+            })
+    
+    except Exception as error:
+        return JsonResponse({
+            "success" : False,
+            "error" : str(error)
+        })
+
+
+
+def get_tokens_for_user(user):
+    """
+    Generate JWT tokens for a user.
+    """
+    refresh = RefreshToken.for_user(user)
+    return {
+        'refresh': str(refresh),
+        'access': str(refresh.access_token),
+    }
+
+def get_suggested_books(request):
+    try:
+        pass
+    except Exception as error:
+        return JsonResponse({
+            "success" : False,
+            "error" : str(error)
+        })
