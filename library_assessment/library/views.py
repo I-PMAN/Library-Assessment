@@ -4,6 +4,8 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 # from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate
 from django.http import JsonResponse
 
 import json
